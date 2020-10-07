@@ -19,7 +19,7 @@ blue_Ship = pygame.image.load(os.path.join('assests' , 'ship_blue_small.png'))
 green_Ship = pygame.image.load(os.path.join('assests' , 'ship_green_small.png'))
 
 # Main player
-Yellow_Ship = pygame.image.load(os.path.join('assests' , 'ship_yellow.png'))
+yellow_Ship = pygame.image.load(os.path.join('assests' , 'ship_yellow.png'))
 
 # Lasers
 red_laser = pygame.image.load(os.path.join('assests' , 'laser_red.png'))
@@ -33,19 +33,51 @@ bg = pygame.transform.scale (pygame.image.load(os.path.join('assests' , 'backgro
 # Ship class
 
 class Ship :
-    def __init__ (self , x , y , health = 100):
+    def __init__ (self , x , y , health=100):
         self.x = x
         self.y = y
         self.health = health
         self.ship_img = None
         self.laser_img = None
-        self.lasers []
+        self.lasers = []
         self.cool_down_counter = 0
 
-    def draw (self):
-        
+    def draw (self , window ):
+        # pygame.draw.rect(window, (255,0,0) ,(self.x , self.y , 50 ,50 ))
+        window.blit(self.ship_img, (self.x, self.y))
 
-        
+    def get_width (self):
+        return self.ship_img.get_width()
+
+
+    def get_height (self):
+        return self.ship_img.get_height()
+
+
+class Player (Ship):
+    def __init__(self , x ,y , health=100):
+        super().__init__(x , y , health)
+        self.ship_img = yellow_Ship
+        self.laser_img = yellow_laser
+        self.mask = pygame.mask.from_surface(self.ship_img)
+        self.max_health = health
+
+class Enemy(Ship):
+    def __init__(self , x , y , health , color):
+        super().__init__(x , y , health)
+        self.ship_img , self.laser_img = self.color_map[color]
+        self.mask = pygame.mask.from_surface(self.ship_img)
+
+    color_map = {
+                "red" : (red_Ship, red_laser),
+                "green" : (green_Ship, green_laser),
+                "blue" : (blue_Ship, blue_laser)
+                }
+                
+    def move (self , vel):
+        self.y += vel
+
+
 
 
 # Main Loop
@@ -53,14 +85,35 @@ def main():
     run = True
     framePerSeconds = 60
     clock = pygame.time.Clock()
-    level = 1 
+    level = 0
     lives = 5
 
+    # Player
+    player = Player(300 , 200)
+    player_vel = 5
     main_font = pygame.font.SysFont('comicsans', 40, italic=True)
+    lost_font = pygame.font.SysFont('comicsans', 60, bold=True , italic=True)
+
+    # Enemies
+    enemies = []
+    wave_length = 5 
+    enemies_vel = 15
+
+    lost = False
+    lost_count = 0
+
 
     def redraw ():
         win.blit(bg , (0,2))
+        
+        for enemy in enemies :
+            enemy.draw(win)
+        player.draw(win)
 
+        if lost :
+            lost_lable = lost_font.render("You Lost" , 1 , (255,255,255))
+            win.blit(lost_lable , (win_width/2 - lost_lable.get_width()/2  , 350 ))
+        
         # Draw level and lives
         level_lable = main_font.render(f"level : {level}" , 1 , (255,255,255))
         lives_lable = main_font.render(f"lives : {lives}" , 1 , (255,255,255))
@@ -76,8 +129,50 @@ def main():
         clock.tick(framePerSeconds)
         redraw()
 
+        if lives <= 0 or player.health <= 0 : 
+            lost = True
+            lost_count +=1
+
+        if lost :
+            if lost_count > framePerSeconds * 2:
+                run = False
+            else :
+                continue
+        
+        if len(enemies) == 0 :
+            level += 1
+            wave_length += 5
+            for i in range(wave_length):
+                enemy = Enemy(random.randrange(50 , win_width-100), random.randrange(-1500  , -100) , 100 , random.choice(["red" , "blue" , "green"]) )
+                enemies.append(enemy)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT :
                 run = False
+
+        keys = pygame.key.get_pressed()
+
+        if keys [pygame.K_d] and player.x + player_vel + player.get_width() < win_width : # right
+            player.x += player_vel
+
+            
+        if keys [pygame.K_a] and player.x - player_vel > 0 : # left
+            player.x -= player_vel
+
+
+        if keys [pygame.K_w] and player.y - player_vel > 0 : # up
+            player.y -= player_vel
+
+
+        if keys [pygame.K_s] and player.y + player_vel + player.get_height() < win_Height : # down
+            player.y += player_vel
+
+        for enemy in enemies[:] :
+            enemy.move(enemies_vel)
+            if enemy.y + enemy.get_height () > win_Height :
+                lives -=1
+                enemies.remove(enemy)
+
+        
 
 main()
