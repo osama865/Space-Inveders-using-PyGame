@@ -30,8 +30,28 @@ yellow_laser = pygame.image.load(os.path.join('assests' , 'laser_yellow.png'))
 # Background
 bg = pygame.transform.scale (pygame.image.load(os.path.join('assests' , 'background-black.png')) , (win_width, win_Height) )
 
-# Ship class
 
+# Laser class
+class Laser :
+    def __init__(self , x , y , img):
+        self.x = x
+        self.y = y
+        self.img = img
+        self.mask = pygame.mask.from_surface(self.img)
+
+    def draw (self , window):
+        window.blit(self.img , (self.x , self.y))
+
+    def move (self , vel):
+        self.y += vel
+
+    def off_screen (self , height):
+        return self.y <= height and self.y >= 0
+
+    def colloision(self , obj):
+        return isCollide (obj , self)
+
+# Ship class
 class Ship :
     def __init__ (self , x , y , health=100):
         self.x = x
@@ -53,7 +73,7 @@ class Ship :
     def get_height (self):
         return self.ship_img.get_height()
 
-
+# Player class
 class Player (Ship):
     def __init__(self , x ,y , health=100):
         super().__init__(x , y , health)
@@ -62,6 +82,7 @@ class Player (Ship):
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_health = health
 
+# Enemy class
 class Enemy(Ship):
     def __init__(self , x , y , health , color):
         super().__init__(x , y , health)
@@ -78,7 +99,7 @@ class Enemy(Ship):
         self.y += vel
 
 
-
+def isCollide ()
 
 # Main Loop
 def main():
