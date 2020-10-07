@@ -4,6 +4,7 @@ import pygame
 import os
 import time
 import random
+import math
 
 # Setting the font
 pygame.font.init()
@@ -45,14 +46,16 @@ class Laser :
     def move (self , vel):
         self.y += vel
 
+
     def off_screen (self , height):
-        return self.y <= height and self.y >= 0
+        return not (self.y <= height and self.y >= 0)
 
     def colloision(self , obj):
         return isCollide (obj , self)
 
 # Ship class
 class Ship :
+    COOLDOWN = 30
     def __init__ (self , x , y , health=100):
         self.x = x
         self.y = y
@@ -66,12 +69,35 @@ class Ship :
         # pygame.draw.rect(window, (255,0,0) ,(self.x , self.y , 50 ,50 ))
         window.blit(self.ship_img, (self.x, self.y))
 
+    def move_lasers (self , vel , obj):
+        self.cool_down()
+        for laser in self.lasers :
+            laser.move(vel)
+
+            if laser.off_screen(win_Height):
+                self.lasers.remove(laser)
+            elif laser.colloision(obj):
+                obj.health -= 10
+                self.lasers.remove(laser)
+            
     def get_width (self):
         return self.ship_img.get_width()
 
 
     def get_height (self):
         return self.ship_img.get_height()
+
+    def cool_down (self):
+        if self.cool_down_counter >=0 :
+            cool_down_counter = 0
+        elif self.cool_down_counter > 0 :
+            cool_down_counter +=1
+
+    def shoot (self):
+        if self.cool_down_counter == 0 :
+            laser = Laser(self.x , self.y ,self.laser_img)
+            self.lasers.append(laser)
+            self.cool_down_counter = 1
 
 # Player class
 class Player (Ship):
@@ -81,6 +107,19 @@ class Player (Ship):
         self.laser_img = yellow_laser
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_health = health
+
+    def move_lasers (self , vel , objs):
+        self.cool_down()
+        for laser in self.lasers :
+            laser.move(vel)
+
+            if laser.off_screen(win_Height):
+                self.lasers.remove(laser)
+            else :
+                for obj in objs :
+                    if laser.colloision(obj):
+                        objs.remove(obj)
+                        self.lasers.remove(laser)
 
 # Enemy class
 class Enemy(Ship):
@@ -99,11 +138,16 @@ class Enemy(Ship):
         self.y += vel
 
 
-def isCollide ()
+def isCollide (obj1 , obj2):
+    offset_x = obj1.x - obj2.x 
+    offset_y = obj1.y - obj2.y
+    return obj1.mask.overlap(obj2.mask , (offset_x , offset_y)) != None
+    
 
 # Main Loop
 def main():
     run = True
+
     framePerSeconds = 60
     clock = pygame.time.Clock()
     level = 0
@@ -118,7 +162,9 @@ def main():
     # Enemies
     enemies = []
     wave_length = 5 
-    enemies_vel = 15
+    enemies_vel = 1
+
+    laser_vel = 4
 
     lost = False
     lost_count = 0
@@ -188,12 +234,18 @@ def main():
         if keys [pygame.K_s] and player.y + player_vel + player.get_height() < win_Height : # down
             player.y += player_vel
 
+        if keys [pygame.K_x] :
+            player.shoot() 
+
+
         for enemy in enemies[:] :
             enemy.move(enemies_vel)
+            enemy.move_lasers(laser_vel , player)
             if enemy.y + enemy.get_height () > win_Height :
                 lives -=1
                 enemies.remove(enemy)
 
+        player.move_lasers (-laser_vel , enemies)
         
 
 main()
